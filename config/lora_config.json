@@ -1,0 +1,7 @@
+{
+  "r": 8,
+  "lora_alpha": 16,
+  "target_modules": ["to_q", "to_k", "to_v", "to_out.0"],
+  "bias": "none",
+  "lora_dropout": 0.1
+}
