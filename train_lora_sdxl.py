@@ -1,7 +1,6 @@
 import argparse
 import os
 import json
-from pathlib import Path
 
 from PIL import Image
 import torch
@@ -70,6 +69,12 @@ def parse_args():
         "--output_dir", default="lora-weights", help="Where to save trained weights"
     )
     parser.add_argument("--batch_size", type=int, default=1)
+    parser.add_argument("--resolution", type=int, default=1024, help="Training resolution")
+    parser.add_argument(
+        "--gradient_checkpointing",
+        action="store_true",
+        help="Enable gradient checkpointing to reduce memory usage",
+    )
     parser.add_argument("--learning_rate", type=float, default=1e-4)
     parser.add_argument("--num_epochs", type=int, default=1)
     parser.add_argument("--lr_warmup_steps", type=int, default=500)
@@ -79,14 +84,17 @@ def parse_args():
 
 def main():
     args = parse_args()
-    accelerator = Accelerator()
+    accelerator = Accelerator(mixed_precision="fp16")
     device = accelerator.device
+
+    os.makedirs(args.output_dir, exist_ok=True)
 
     pipe = StableDiffusionXLPipeline.from_pretrained(
         args.pretrained_model_name_or_path, torch_dtype=torch.float16
     )
     pipe.to(device)
     pipe.vae.requires_grad_(False)
+    pipe.enable_vae_slicing()
 
     tokenizer = pipe.tokenizer
 
@@ -103,9 +111,11 @@ def main():
     )
 
     unet = get_peft_model(pipe.unet, lora_config)
+    if args.gradient_checkpointing:
+        unet.enable_gradient_checkpointing()
     unet.train()
 
-    dataset = StyleDataset(args.data_dir, args.captions_file, tokenizer)
+    dataset = StyleDataset(args.data_dir, args.captions_file, tokenizer, size=args.resolution)
     dataloader = DataLoader(
         dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers
     )
