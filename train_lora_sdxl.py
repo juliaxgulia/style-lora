@@ -56,10 +56,14 @@ def parse_args():
         default="stabilityai/stable-diffusion-xl-base-1.0",
         help="Model identifier from huggingface.co or local path",
     )
-    parser.add_argument("--data_dir", default="data", help="Folder with training images")
+    parser.add_argument(
+        "--data_dir",
+        default="data/preprocessed_output",
+        help="Folder containing images and captions.json",
+    )
     parser.add_argument(
         "--captions_file",
-        default="data/example_captions.json",
+        default="data/preprocessed_output/captions.json",
         help="JSON mapping image filenames to captions",
     )
     parser.add_argument(
