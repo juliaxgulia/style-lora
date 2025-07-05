@@ -150,7 +150,17 @@ def main():
                 noisy_latents = noise_scheduler.add_noise(latents, noise, timesteps)
 
                 encoder_hidden_states = pipe.text_encoder(batch["input_ids"].to(device))[0]
-                model_pred = unet(noisy_latents, timesteps, encoder_hidden_states=encoder_hidden_states).sample
+                pooled_text_embeds = encoder_hidden_states.mean(dim=1)
+                added_cond_kwargs = {
+                    "text_embeds": pooled_text_embeds,
+                    "time_ids": torch.zeros((latents.size(0), 6), device=device, dtype=torch.long),
+                }
+                model_pred = unet(
+                    noisy_latents,
+                    timesteps,
+                    encoder_hidden_states=encoder_hidden_states,
+                    added_cond_kwargs=added_cond_kwargs,
+                ).sample
 
                 loss = torch.nn.functional.mse_loss(
                     model_pred.float(), noise.float(), reduction="mean"
